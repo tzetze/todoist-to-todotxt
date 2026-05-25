@@ -21,7 +21,8 @@ Done:
 Goal:
 
 - prove the CLI can authenticate to [`Todoist`](https://todoist.com)
-- fetch projects and tasks
+- fetch projects and active tasks
+- resolve task project references by reading projects first
 - expose the raw fetched data in a simple way
 - avoid internal models and avoid [`todo.txt`](http://todotxt.org) output for now
 
@@ -48,14 +49,17 @@ Tests:
 
 Deliver:
 
-- Todoist client for basic project reads
+- Todoist client for project list reads
+- one read call for all projects
 - mocked HTTP tests for project reads
 
 ### Phase 1 / Stage 3
 
 Deliver:
 
-- Todoist client for basic task reads
+- Todoist client for active task reads
+- one read call for all active tasks
+- treat task project data as a project reference, not a human-readable project name
 - mocked HTTP tests for task reads
 
 ### Phase 1 / Stage 4
@@ -63,6 +67,8 @@ Deliver:
 Deliver:
 
 - simple CLI command that executes the read flow
+- fetch projects first, then active tasks
+- build an in-memory project id to project name lookup
 - simple output of fetched data for manual inspection
 - end-to-end smoke test for the POC flow
 
