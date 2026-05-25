@@ -55,14 +55,9 @@ CLI -> Config -> Todoist client -> Mapper -> Renderer -> Writer
 
 ## Configuration
 
-Required:
+Current required input:
 
 - Todoist API token
-- output path
-
-Prefer environment variables for secrets.
-
-A config file can be added later only if needed.
 
 ## Errors
 
@@ -108,9 +103,3 @@ src/
     writer.py
 tests/
 ```
-
-## Open questions
-
-- exact Todoist endpoints and pagination needs
-- final Todoist to [`todo.txt`](http://todotxt.org) mapping rules
-- how projects, labels, priorities, and due dates should appear

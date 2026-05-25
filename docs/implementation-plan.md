@@ -1,10 +1,20 @@
 # Implementation Plan
 
-This document describes the planned implementation details for the current solution shape. For decision rationale, refer to the ADRs under `docs/adr/`.
+This document describes the planned implementation details and delivery sequence for the current solution shape. For decision rationale, refer to the ADRs under `docs/adr/`.
 
 ## Scope
 
 Build the tool in small phases. Each phase should stay useful, testable, and limited to the data it really needs.
+
+## Current baseline
+
+Done:
+
+- repository initialized
+- Python chosen
+- `venv` with `pyproject.toml` chosen
+- initial ADRs written
+- architecture plan written
 
 ## Phase 1: Todoist read POC
 
@@ -12,16 +22,49 @@ Goal:
 
 - prove the CLI can authenticate to [`Todoist`](https://todoist.com)
 - fetch projects and tasks
-- print or otherwise expose the raw fetched data in a simple way
+- expose the raw fetched data in a simple way
 - avoid internal models and avoid [`todo.txt`](http://todotxt.org) output for now
 
-Planned work:
+### Phase 1 / Stage 1
+
+Deliver:
 
 - minimal CLI entry point
 - config loading from environment
-- Todoist client for basic read operations
 - simple error handling
-- tests for config validation and mocked Todoist reads
+
+Proposed example call:
+
+```bash
+todoist-to-todotxt
+```
+
+Tests:
+
+- config validation tests
+- CLI smoke tests
+
+### Phase 1 / Stage 2
+
+Deliver:
+
+- Todoist client for basic project reads
+- mocked HTTP tests for project reads
+
+### Phase 1 / Stage 3
+
+Deliver:
+
+- Todoist client for basic task reads
+- mocked HTTP tests for task reads
+
+### Phase 1 / Stage 4
+
+Deliver:
+
+- simple CLI command that executes the read flow
+- simple output of fetched data for manual inspection
+- end-to-end smoke test for the POC flow
 
 ## Phase 2: Basic export
 
@@ -31,28 +74,69 @@ Goal:
 - support basic project and simple todo export
 - focus on title and description only
 
-Planned work:
+### Phase 2 / Stage 1
+
+Deliver:
 
 - introduce only the internal structures needed for basic export
-- map Todoist projects and tasks into basic export input
+- define first basic mapping rules
+
+Proposed example call:
+
+```bash
+todoist-to-todotxt
+```
+
+Optional output override:
+
+```bash
+todoist-to-todotxt --output custom-todo.txt
+```
+
+Tests:
+
+- mapper tests
+
+### Phase 2 / Stage 2
+
+Deliver:
+
 - render basic `todo.txt` output
-- write output atomically
-- tests for mapping, rendering, and file writing
+
+Tests:
+
+- renderer tests
+- fixture-based output tests
+
+### Phase 2 / Stage 3
+
+Deliver:
+
+- atomically write the output file
+- complete the CLI export flow
+- make `--output` optional with default value `todo.txt`
+
+Tests:
+
+- atomic file write tests
+- end-to-end export tests
 
 ## Later phases
 
-Add features step by step only when needed.
+Possible next topics:
 
-Possible next phases:
-
-- due date support
+- due dates
 - priority mapping
 - labels or contexts
 - completed task handling
 - comments or other separately fetched data
-- richer formatting options
+- formatting refinements
 
-Each feature should be introduced together with the smallest necessary model changes and tests.
+Rule:
+
+- each new feature gets its own phase or stage when the scope is clear
+- model only the data needed for the current phase
+- add tests in the same phase that introduces the behavior
 
 ## Module plan by maturity
 
@@ -73,35 +157,14 @@ Keep modules absent until they are justified by the current phase.
 
 ## Configuration plan
 
-Initial environment variables:
+Initial environment variable:
 
-- `TODOIST_API_TOKEN`
-- `TODOTXT_OUTPUT_PATH` for export phases
+- `TODOIST_API_TOKEN` for the Todoist API token
 
-Add more only when a real phase needs them.
 
-## Testing plan
+## Working style
 
-Phase 1:
-
-- config validation tests
-- Todoist client tests with mocked HTTP
-- CLI smoke tests
-
-Phase 2:
-
-- mapper tests
-- renderer tests
-- atomic file write tests
-- end-to-end export tests with fixture payloads
-
-Later phases:
-
-- add tests together with each new data type or formatting rule
-
-## Open questions
-
-- which Todoist endpoints give the simplest first read path
-- what the first basic `todo.txt` line format should be
-- when descriptions should become part of output
-- which extra Todoist fields are worth adding after the basic export works
+- keep phases and stages small
+- review decisions before locking them
+- commit frequently
+- push regularly

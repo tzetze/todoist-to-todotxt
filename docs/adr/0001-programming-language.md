@@ -1,6 +1,6 @@
 # ADR 0001: Use Python
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-05-25
 
 ## Context
