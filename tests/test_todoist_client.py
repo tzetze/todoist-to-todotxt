@@ -47,10 +47,13 @@ def test_get_projects_returns_projects(monkeypatch) -> None:
         assert http_request.headers["Authorization"] == "Bearer secret-token"
         return FakeResponse(
             json.dumps(
-                [
-                    {"id": "1001", "name": "Inbox"},
-                    {"id": 1002, "name": "Work"},
-                ]
+                {
+                    "results": [
+                        {"id": "1001", "name": "Inbox"},
+                        {"id": 1002, "name": "Work"},
+                    ],
+                    "next_cursor": None,
+                }
             )
         )
 
@@ -98,7 +101,7 @@ def test_get_projects_raises_for_missing_required_fields(monkeypatch) -> None:
     client = TodoistClient(make_config())
 
     def fake_urlopen(http_request):
-        return FakeResponse(json.dumps([{"id": "1001"}]))
+        return FakeResponse(json.dumps({"results": [{"id": "1001"}], "next_cursor": None}))
 
     monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
 
@@ -117,10 +120,13 @@ def test_get_active_tasks_returns_tasks(monkeypatch) -> None:
         assert http_request.headers["Authorization"] == "Bearer secret-token"
         return FakeResponse(
             json.dumps(
-                [
-                    {"id": "2001", "content": "Buy milk", "project_id": "1001"},
-                    {"id": 2002, "content": "Write report", "project_id": 1002},
-                ]
+                {
+                    "results": [
+                        {"id": "2001", "content": "Buy milk", "project_id": "1001"},
+                        {"id": 2002, "content": "Write report", "project_id": 1002},
+                    ],
+                    "next_cursor": None,
+                }
             )
         )
 
@@ -138,7 +144,7 @@ def test_get_active_tasks_returns_empty_list(monkeypatch) -> None:
     client = TodoistClient(make_config())
 
     def fake_urlopen(http_request):
-        return FakeResponse(json.dumps([]))
+        return FakeResponse(json.dumps({"results": [], "next_cursor": None}))
 
     monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
 
@@ -181,7 +187,9 @@ def test_get_active_tasks_raises_for_missing_required_fields(monkeypatch) -> Non
     client = TodoistClient(make_config())
 
     def fake_urlopen(http_request):
-        return FakeResponse(json.dumps([{"id": "2001", "content": "Buy milk"}]))
+        return FakeResponse(
+            json.dumps({"results": [{"id": "2001", "content": "Buy milk"}], "next_cursor": None})
+        )
 
     monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
 
@@ -193,9 +201,106 @@ def test_get_active_tasks_raises_for_non_list_response(monkeypatch) -> None:
     client = TodoistClient(make_config())
 
     def fake_urlopen(http_request):
-        return FakeResponse(json.dumps({"error": "not a list"}))
+        return FakeResponse(json.dumps({"error": "not an object with results"}))
 
     monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
 
-    with pytest.raises(TodoistClientError, match="tasks response must be a list"):
+    with pytest.raises(TodoistClientError, match="tasks response must contain a results list"):
         client.get_active_tasks()
+
+
+
+def test_get_projects_handles_pagination(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+    call_count = 0
+
+    def fake_urlopen(http_request):
+        nonlocal call_count
+        call_count += 1
+
+        if call_count == 1:
+            # First page
+            assert "cursor=" not in http_request.full_url
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "results": [{"id": "1001", "name": "Inbox"}],
+                        "next_cursor": "page2_cursor",
+                    }
+                )
+            )
+        elif call_count == 2:
+            # Second page
+            assert "cursor=page2_cursor" in http_request.full_url
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "results": [{"id": "1002", "name": "Work"}],
+                        "next_cursor": None,
+                    }
+                )
+            )
+        raise ValueError(f"Unexpected call count: {call_count}")
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    projects = client.get_projects()
+
+    assert len(projects) == 2
+    assert projects[0] == TodoistProject(id="1001", name="Inbox")
+    assert projects[1] == TodoistProject(id="1002", name="Work")
+    assert call_count == 2
+
+
+def test_get_active_tasks_handles_pagination(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+    call_count = 0
+
+    def fake_urlopen(http_request):
+        nonlocal call_count
+        call_count += 1
+
+        if call_count == 1:
+            # First page
+            assert "cursor=" not in http_request.full_url
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "results": [{"id": "2001", "content": "Task 1", "project_id": "1001"}],
+                        "next_cursor": "page2_cursor",
+                    }
+                )
+            )
+        elif call_count == 2:
+            # Second page
+            assert "cursor=page2_cursor" in http_request.full_url
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "results": [{"id": "2002", "content": "Task 2", "project_id": "1002"}],
+                        "next_cursor": "page3_cursor",
+                    }
+                )
+            )
+        elif call_count == 3:
+            # Third page (empty, end of pagination)
+            assert "cursor=page3_cursor" in http_request.full_url
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "results": [{"id": "2003", "content": "Task 3", "project_id": "1001"}],
+                        "next_cursor": None,
+                    }
+                )
+            )
+        raise ValueError(f"Unexpected call count: {call_count}")
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    tasks = client.get_active_tasks()
+
+    assert len(tasks) == 3
+    assert tasks[0] == TodoistTask(id="2001", content="Task 1", project_id="1001")
+    assert tasks[1] == TodoistTask(id="2002", content="Task 2", project_id="1002")
+    assert tasks[2] == TodoistTask(id="2003", content="Task 3", project_id="1001")
+    assert call_count == 3

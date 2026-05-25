@@ -37,12 +37,10 @@ class TodoistClient:
 
     def get_projects(self) -> list[TodoistProject]:
         """Fetch all Todoist projects."""
-        response_body = self._get_json("/projects")
-        if not isinstance(response_body, list):
-            raise TodoistClientError("Todoist projects response must be a list")
+        all_results = self._get_all_pages("/projects")
 
         projects: list[TodoistProject] = []
-        for item in response_body:
+        for item in all_results:
             if not isinstance(item, dict):
                 raise TodoistClientError("Todoist project entry must be an object")
 
@@ -57,12 +55,10 @@ class TodoistClient:
 
     def get_active_tasks(self) -> list[TodoistTask]:
         """Fetch all active Todoist tasks."""
-        response_body = self._get_json("/tasks")
-        if not isinstance(response_body, list):
-            raise TodoistClientError("Todoist tasks response must be a list")
+        all_results = self._get_all_pages("/tasks")
 
         tasks: list[TodoistTask] = []
-        for item in response_body:
+        for item in all_results:
             if not isinstance(item, dict):
                 raise TodoistClientError("Todoist task entry must be an object")
 
@@ -86,6 +82,39 @@ class TodoistClient:
             )
 
         return tasks
+
+    def _get_all_pages(self, path: str) -> list[Any]:
+        """Fetch all pages from a paginated endpoint."""
+        all_results: list[Any] = []
+        cursor: str | None = None
+
+        while True:
+            # Add cursor parameter if we have one
+            request_path = path
+            if cursor:
+                separator = "&" if "?" in path else "?"
+                request_path = f"{path}{separator}cursor={cursor}"
+
+            response_body = self._get_json(request_path)
+
+            # New API wraps response in an object with "results" array
+            if not isinstance(response_body, dict):
+                raise TodoistClientError(f"Todoist {path} response must be an object")
+
+            results = response_body.get("results")
+            if not isinstance(results, list):
+                raise TodoistClientError(f"Todoist {path} response must contain a results list")
+
+            all_results.extend(results)
+
+            # Check if there are more pages
+            next_cursor = response_body.get("next_cursor")
+            if next_cursor is None or next_cursor == "":
+                break
+
+            cursor = next_cursor
+
+        return all_results
 
     def _get_json(self, path: str) -> Any:
         request_url = f"{self._config.todoist_api_base_url}{path}"
