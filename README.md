@@ -13,3 +13,21 @@ The project specification lives under `docs/`, and the related architectural dec
 - read data from [`Todoist`](https://todoist.com)
 - generate a local [`todo.txt`](http://todotxt.org) file
 - keep the tool small, transparent, and automation-friendly
+
+## Setup for a fresh clone
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+## Current local usage
+
+```bash
+TODOIST_API_TOKEN='your-token-here' .venv/bin/todoist-to-todotxt
+```
+
+Current behavior:
+- exits with code `2` if `TODOIST_API_TOKEN` is missing
+- prints a configuration-loaded message when the token is present

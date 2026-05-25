@@ -34,10 +34,18 @@ Deliver:
 - config loading from environment
 - simple error handling
 
-Proposed example call:
+Setup for a fresh clone:
 
 ```bash
-todoist-to-todotxt
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+Proposed example call after setup:
+
+```bash
+TODOIST_API_TOKEN='your-token-here' .venv/bin/todoist-to-todotxt
 ```
 
 Tests:
@@ -90,16 +98,16 @@ Deliver:
 - introduce only the internal structures needed for basic export
 - define first basic mapping rules
 
-Proposed example call:
+Proposed example call after setup:
 
 ```bash
-todoist-to-todotxt
+TODOIST_API_TOKEN='your-token-here' .venv/bin/todoist-to-todotxt
 ```
 
 Optional output override:
 
 ```bash
-todoist-to-todotxt --output custom-todo.txt
+TODOIST_API_TOKEN='your-token-here' .venv/bin/todoist-to-todotxt --output custom-todo.txt
 ```
 
 Tests:
@@ -169,6 +177,20 @@ Keep modules absent until they are justified by the current phase.
 Initial environment variable:
 
 - `TODOIST_API_TOKEN` for the Todoist API token
+
+Fresh-clone setup:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+Current local run pattern after setup:
+
+```bash
+TODOIST_API_TOKEN='your-token-here' .venv/bin/todoist-to-todotxt
+```
 
 
 ## Working style
