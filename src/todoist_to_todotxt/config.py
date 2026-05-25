@@ -14,6 +14,7 @@ class Config:
 
     todoist_api_token: str
     token_source: str
+    todoist_api_base_url: str = "https://api.todoist.com/rest/v2"
 
 
 def load_config() -> Config:
