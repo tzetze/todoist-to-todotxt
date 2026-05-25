@@ -20,6 +20,15 @@ class TodoistProject:
     name: str
 
 
+@dataclass(frozen=True)
+class TodoistTask:
+    """Minimal Todoist task representation for read operations."""
+
+    id: str
+    content: str
+    project_id: str
+
+
 class TodoistClient:
     """Small Todoist REST client."""
 
@@ -45,6 +54,38 @@ class TodoistClient:
             projects.append(TodoistProject(id=str(project_id), name=project_name))
 
         return projects
+
+    def get_active_tasks(self) -> list[TodoistTask]:
+        """Fetch all active Todoist tasks."""
+        response_body = self._get_json("/tasks")
+        if not isinstance(response_body, list):
+            raise TodoistClientError("Todoist tasks response must be a list")
+
+        tasks: list[TodoistTask] = []
+        for item in response_body:
+            if not isinstance(item, dict):
+                raise TodoistClientError("Todoist task entry must be an object")
+
+            task_id = item.get("id")
+            task_content = item.get("content")
+            task_project_id = item.get("project_id")
+            if (
+                task_id is None
+                or not isinstance(task_content, str)
+                or not task_content
+                or task_project_id is None
+            ):
+                raise TodoistClientError("Todoist task entry is missing required fields")
+
+            tasks.append(
+                TodoistTask(
+                    id=str(task_id),
+                    content=task_content,
+                    project_id=str(task_project_id),
+                )
+            )
+
+        return tasks
 
     def _get_json(self, path: str) -> Any:
         request_url = f"{self._config.todoist_api_base_url}{path}"

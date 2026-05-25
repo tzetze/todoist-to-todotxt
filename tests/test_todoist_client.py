@@ -12,6 +12,7 @@ from todoist_to_todotxt.todoist_client import (
     TodoistClient,
     TodoistClientError,
     TodoistProject,
+    TodoistTask,
 )
 
 
@@ -104,3 +105,97 @@ def test_get_projects_raises_for_missing_required_fields(monkeypatch) -> None:
     with pytest.raises(TodoistClientError, match="missing required fields"):
         client.get_projects()
 
+
+
+
+def test_get_active_tasks_returns_tasks(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        assert http_request.full_url == "https://example.test/tasks"
+        assert http_request.get_method() == "GET"
+        assert http_request.headers["Authorization"] == "Bearer secret-token"
+        return FakeResponse(
+            json.dumps(
+                [
+                    {"id": "2001", "content": "Buy milk", "project_id": "1001"},
+                    {"id": 2002, "content": "Write report", "project_id": 1002},
+                ]
+            )
+        )
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    tasks = client.get_active_tasks()
+
+    assert tasks == [
+        TodoistTask(id="2001", content="Buy milk", project_id="1001"),
+        TodoistTask(id="2002", content="Write report", project_id="1002"),
+    ]
+
+
+def test_get_active_tasks_returns_empty_list(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        return FakeResponse(json.dumps([]))
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    tasks = client.get_active_tasks()
+
+    assert tasks == []
+
+
+def test_get_active_tasks_raises_for_http_error(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        raise error.HTTPError(
+            url=http_request.full_url,
+            code=403,
+            msg="Forbidden",
+            hdrs=Message(),
+            fp=None,
+        )
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    with pytest.raises(TodoistClientError, match="status 403"):
+        client.get_active_tasks()
+
+
+def test_get_active_tasks_raises_for_invalid_json(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        return FakeResponse("invalid-json")
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    with pytest.raises(TodoistClientError, match="not valid JSON"):
+        client.get_active_tasks()
+
+
+def test_get_active_tasks_raises_for_missing_required_fields(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        return FakeResponse(json.dumps([{"id": "2001", "content": "Buy milk"}]))
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    with pytest.raises(TodoistClientError, match="missing required fields"):
+        client.get_active_tasks()
+
+
+def test_get_active_tasks_raises_for_non_list_response(monkeypatch) -> None:
+    client = TodoistClient(make_config())
+
+    def fake_urlopen(http_request):
+        return FakeResponse(json.dumps({"error": "not a list"}))
+
+    monkeypatch.setattr("todoist_to_todotxt.todoist_client.request.urlopen", fake_urlopen)
+
+    with pytest.raises(TodoistClientError, match="tasks response must be a list"):
+        client.get_active_tasks()
