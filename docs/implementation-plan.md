@@ -23,7 +23,7 @@ Goal:
 - prove the CLI can authenticate to [`Todoist`](https://todoist.com)
 - fetch projects and active tasks
 - resolve task project references by reading projects first
-- expose the raw fetched data in a simple way
+- expose the fetched data in a simple human-readable way
 - avoid internal models and avoid [`todo.txt`](http://todotxt.org) output for now
 
 ### Phase 1 / Stage 1
@@ -69,7 +69,10 @@ Deliver:
 - simple CLI command that executes the read flow
 - fetch projects first, then active tasks
 - build an in-memory project id to project name lookup
-- simple output of fetched data for manual inspection
+- print a human-readable summary, not raw full JSON
+- show project and task counts
+- show one line per task with resolved project name and task title
+- optionally include task id for debugging
 - end-to-end smoke test for the POC flow
 
 ## Phase 2: Basic export
